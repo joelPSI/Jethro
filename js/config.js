@@ -13,6 +13,6 @@
  * never in this file, never in the repo, never in a backup.
  */
 const Config = {
-  url: 'https://ekkysohguyginzjojxft.supabase.co',
-  anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVra3lzb2hndXlnaW56am9qeGZ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3Mzc3NDYsImV4cCI6MjA4OTMxMzc0Nn0.SQARiJWZs8HQHQ3ev7ukstcKBDEwAOaK-VKtLoKgzIo',
+  url: '',
+  anonKey: '',
 };
