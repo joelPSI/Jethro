@@ -19,6 +19,10 @@
   --diaper-soft: #dff0e4;
   --sleep: #5a6fae;
   --sleep-soft: #e2e6f6;
+  --pump: #b0577d;
+  --pump-soft: #f7e3ec;
+  --growth: #3f8a8c;
+  --growth-soft: #dcefef;
   --danger: #b3453c;
 
   --radius: 18px;
@@ -47,6 +51,10 @@
     --diaper-soft: #1e3025;
     --sleep: #93a5e0;
     --sleep-soft: #232840;
+    --pump: #e398b8;
+    --pump-soft: #3a2230;
+    --growth: #7cc6c7;
+    --growth-soft: #1c3132;
     --danger: #e2796f;
     --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .25);
   }
@@ -183,7 +191,15 @@ main { padding: 0 16px; max-width: 620px; margin: 0 auto; }
 .stat-note { font-size: 11px; color: var(--text-dim); }
 
 /* ── quick log ─────────────────────────────────────────────── */
-.quick-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.quick-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+.quick-grid .quick { grid-column: span 2; }
+/* Less frequent things (pump, growth): a shorter second row, side by side. */
+.quick-grid .quick.is-secondary {
+  grid-column: span 3;
+  flex-direction: row; justify-content: center;
+  padding: 12px 8px;
+}
+.quick-grid .quick.is-secondary .quick-icon { font-size: 20px; }
 .quick {
   display: flex; flex-direction: column; align-items: center; gap: 6px;
   padding: 18px 8px;
@@ -198,6 +214,8 @@ main { padding: 0 16px; max-width: 620px; margin: 0 auto; }
 .quick-feed   { background: var(--feed-soft);   color: var(--feed); }
 .quick-diaper { background: var(--diaper-soft); color: var(--diaper); }
 .quick-sleep  { background: var(--sleep-soft);  color: var(--sleep); }
+.quick-pump   { background: var(--pump-soft);   color: var(--pump); }
+.quick-growth { background: var(--growth-soft); color: var(--growth); }
 
 /* ── today summary ─────────────────────────────────────────── */
 .today { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
@@ -235,6 +253,8 @@ main { padding: 0 16px; max-width: 620px; margin: 0 auto; }
 .entry-dot.feed   { background: var(--feed-soft); }
 .entry-dot.diaper { background: var(--diaper-soft); }
 .entry-dot.sleep  { background: var(--sleep-soft); }
+.entry-dot.pump   { background: var(--pump-soft); }
+.entry-dot.growth { background: var(--growth-soft); }
 .entry-main { flex: 1; min-width: 0; }
 .entry-title { font-weight: 600; font-size: 15px; }
 .entry-sub { font-size: 13px; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -275,6 +295,12 @@ main { padding: 0 16px; max-width: 620px; margin: 0 auto; }
 .bar-fill.feed { background: var(--feed); }
 .bar-fill.diaper { background: var(--diaper); }
 .bar-fill.sleep { background: var(--sleep); }
+.bar-fill.pump { background: var(--pump); }
+.growth-list { display: flex; flex-direction: column; gap: 8px; }
+.growth-row {
+  display: grid; grid-template-columns: 52px 1fr; gap: 10px; align-items: center;
+  font-size: 14px; font-variant-numeric: tabular-nums;
+}
 .bar-fill.is-zero { min-width: 0; }
 .bar-val { font-size: 13px; font-variant-numeric: tabular-nums; min-width: 58px; text-align: right; color: var(--text-dim); }
 .avg { font-size: 13px; color: var(--text-dim); margin: 8px 4px 0; }
@@ -356,6 +382,18 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 .seg button.is-on { background: var(--accent); border-color: transparent; color: #fff; }
 @media (prefers-color-scheme: dark) { .seg button.is-on { color: #201509; } }
 .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+[data-show-if] { margin-top: 14px; }
+/* Food picker for solids: tap as many as he had. */
+.food-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.food-chip {
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  border-radius: 999px;
+  padding: 8px 12px; min-height: 40px;
+  font-size: 14px; font-weight: 550;
+  cursor: pointer;
+}
+.food-chip.is-on { background: var(--feed-soft); border-color: var(--feed); color: var(--feed); }
 .hint { font-size: 12px; color: var(--text-dim); margin: -6px 0 14px; }
 
 /* ── toast ─────────────────────────────────────────────────── */

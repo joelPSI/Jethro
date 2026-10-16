@@ -1,6 +1,6 @@
 {
-  "name": "Nayla — Baby Tracker",
-  "short_name": "Nayla",
+  "name": "Jethro — Baby Tracker",
+  "short_name": "Jethro",
   "description": "Track feeding, diaper changes, sleep and wake windows.",
   "start_url": "./index.html",
   "scope": "./",

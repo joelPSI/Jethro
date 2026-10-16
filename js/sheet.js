@@ -53,6 +53,17 @@ const Sheet = (() => {
               <input type="hidden" name="${field.name}" value="${escapeHtml(value ?? '')}">`;
     }
 
+    if (field.input === 'chips') {
+      // Multi-select: tap as many as apply. Saved as comma-separated keys.
+      const on = new Set(Array.isArray(value) ? value : String(value || '').split(',').filter(Boolean));
+      const chips = field.options.map(([v, l]) =>
+        `<button type="button" data-chip="${field.name}" data-value="${v}"
+                 class="food-chip ${on.has(v) ? 'is-on' : ''}">${escapeHtml(l)}</button>`).join('');
+      return `<div class="field"><span>${escapeHtml(field.label)}</span>
+        <div class="food-chips">${chips}</div></div>
+        <input type="hidden" name="${field.name}" value="${escapeHtml([...on].join(','))}">`;
+    }
+
     if (field.input === 'datetime') {
       return `<label class="field"><span>${escapeHtml(label(field, settings))}</span>
         <input type="datetime-local" name="${field.name}"
@@ -83,11 +94,23 @@ const Sheet = (() => {
         out.push(`<div class="row-2">${renderField(spec[i], values, settings)}` +
                  `${renderField(spec[i + 1], values, settings)}</div>`);
         i++;
+      } else if (spec[i].showIf) {
+        // Only shown while another field has a given value, e.g. foods for solids.
+        const [other, wanted] = spec[i].showIf;
+        out.push(`<div data-show-if="${other}=${wanted}" ${values[other] === wanted ? '' : 'hidden'}>` +
+                 `${renderField(spec[i], values, settings)}</div>`);
       } else {
         out.push(renderField(spec[i], values, settings));
       }
     }
     return out.join('');
+  }
+
+  function updateConditional() {
+    fields.querySelectorAll('[data-show-if]').forEach(el => {
+      const [other, wanted] = el.dataset.showIf.split('=');
+      el.hidden = form.elements[other]?.value !== wanted;
+    });
   }
 
   /* ── reading the form back ───────────────────────────────── */
@@ -129,11 +152,19 @@ const Sheet = (() => {
 
   /* ── wiring ──────────────────────────────────────────────── */
   fields.addEventListener('click', e => {
+    const chip = e.target.closest('[data-chip]');
+    if (chip) {
+      chip.classList.toggle('is-on');
+      const picked = [...chip.parentElement.querySelectorAll('.is-on')].map(b => b.dataset.value);
+      form.elements[chip.dataset.chip].value = picked.join(',');
+      return;
+    }
     const btn = e.target.closest('[data-seg]');
     if (!btn) return;
     btn.parentElement.querySelectorAll('button')
       .forEach(b => b.classList.toggle('is-on', b === btn));
     form.elements[btn.dataset.seg].value = btn.dataset.value;
+    updateConditional();
   });
 
   form.addEventListener('submit', e => {

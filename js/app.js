@@ -44,14 +44,14 @@
   /* ── static chrome built from the registry ───────────────── */
   function buildChrome() {
     $('#quickGrid').innerHTML = Features.all().map(f =>
-      `<button class="quick quick-${f.type}" data-log="${f.type}">
+      `<button class="quick quick-${f.type} ${f.secondary ? 'is-secondary' : ''}" data-log="${f.type}">
          <span class="quick-icon">${f.icon}</span><span>${f.label}</span>
        </button>`).join('');
 
     $('#historyFilters').innerHTML =
       `<button class="chip is-on" data-filter="all">All</button>` +
       Features.all().map(f =>
-        `<button class="chip" data-filter="${f.type}">${f.label}s</button>`).join('');
+        `<button class="chip" data-filter="${f.type}">${f.plural || f.label + 's'}</button>`).join('');
   }
 
   /* ── NOW view ────────────────────────────────────────────── */
@@ -94,7 +94,7 @@
   }
 
   function renderStatusRow(settings) {
-    $('#statusRow').innerHTML = Features.all().map(f => {
+    $('#statusRow').innerHTML = Features.all().filter(f => f.statusLabel).map(f => {
       const record = Store.latest(f.type, { completedOnly: Boolean(f.statusCompletedOnly) });
       return `<button class="stat" data-quick="${f.type}">
         <span class="stat-icon">${f.icon}</span>
@@ -212,7 +212,9 @@
       days.push({ date: d, ...dayTotals(d) });
     }
 
-    if (!days.some(d => d.feeds || d.diapers || d.sleepMs)) {
+    const growthRecords = Store.byType('growth').slice(0, 6);
+
+    if (!days.some(d => d.feeds || d.diapers || d.sleepMs || d.pumps) && !growthRecords.length) {
       $('#statsBody').innerHTML = `<p class="empty">Log a few days and trends will show up here.</p>`;
       return;
     }
@@ -225,7 +227,23 @@
         ? block('Bottle volume per day', days, 'feed', d => d.feedMl || 0,
                 ml => Fmt.amount(ml, settings.units))
         : '',
+      days.some(d => d.pumpMl)
+        ? block('Pumped per day', days, 'pump', d => d.pumpMl || 0,
+                ml => Fmt.amount(ml, settings.units))
+        : '',
+      growthBlock(growthRecords),
     ].filter(Boolean).join('');
+  }
+
+  /** The most recent measurements, newest first. */
+  function growthBlock(records) {
+    if (!records.length) return '';
+    const rows = records.map(r => `
+      <div class="growth-row">
+        <span class="bar-day">${r.at ? new Date(r.at).toLocaleDateString([], { day: 'numeric', month: 'short' }) : ''}</span>
+        <span>${escapeHtml(Features.growthText(r))}</span>
+      </div>`).join('');
+    return `<div class="stat-block"><h3>Growth</h3><div class="growth-list">${rows}</div></div>`;
   }
 
   function block(heading, days, kind, pick, label) {
@@ -381,7 +399,7 @@
 
   $('#pairShare').addEventListener('click', async () => {
     const how = await Pair.share();
-    if (how === 'copied') toast('Link copied — paste it to her');
+    if (how === 'copied') toast('Link copied — send it to the other phone');
     else if (how === 'failed') toast("Couldn't share the link on this browser.");
   });
 
@@ -461,7 +479,7 @@
       toast('Backup restored');
     } catch (err) {
       console.warn(err);
-      toast("That file doesn't look like a Nayla backup.");
+      toast("That file doesn't look like a backup from this app.");
     } finally {
       e.target.value = '';
     }

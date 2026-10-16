@@ -26,6 +26,56 @@ const Features = (() => {
 
   const DIAPER_KIND = { wet: 'Wet', dirty: 'Dirty', both: 'Wet + dirty' };
 
+  /* Foods offered when a feed is "Solids". To add one, add a line:
+   *   ['key', 'emoji', 'Name'],
+   * The key is what gets saved, so don't rename a key once you've used it —
+   * change the emoji or the name instead. */
+  const FOODS = [
+    ['rice', '🍚', 'Rice'],
+    ['porridge', '🥣', 'Porridge'],
+    ['cereal', '🌾', 'Cereal'],
+    ['noodles', '🍜', 'Noodles'],
+    ['bread', '🍞', 'Bread'],
+    ['pumpkin', '🎃', 'Pumpkin'],
+    ['carrot', '🥕', 'Carrot'],
+    ['potato', '🥔', 'Potato'],
+    ['sweetpotato', '🍠', 'Sweet potato'],
+    ['broccoli', '🥦', 'Broccoli'],
+    ['greens', '🥬', 'Greens'],
+    ['cucumber', '🥒', 'Cucumber'],
+    ['tomato', '🍅', 'Tomato'],
+    ['beetroot', '🟣', 'Beetroot'],
+    ['corn', '🌽', 'Corn'],
+    ['avocado', '🥑', 'Avocado'],
+    ['banana', '🍌', 'Banana'],
+    ['apple', '🍎', 'Apple'],
+    ['pear', '🍐', 'Pear'],
+    ['orange', '🍊', 'Orange'],
+    ['lemon', '🍋', 'Lemon'],
+    ['blueberries', '🫐', 'Blueberries'],
+    ['mango', '🥭', 'Mango'],
+    ['egg', '🥚', 'Egg'],
+    ['chicken', '🍗', 'Chicken'],
+    ['fish', '🐟', 'Fish'],
+    ['pork', '🐷', 'Pork'],
+    ['beef', '🥩', 'Beef'],
+    ['tofu', '🤍', 'Tofu'],
+    ['cheese', '🧀', 'Cheese'],
+    ['yogurt', '🥛', 'Yogurt'],
+  ];
+  const FOOD = Object.fromEntries(FOODS.map(([k, e, l]) => [k, { emoji: e, label: l }]));
+
+  function foodList(keys) {
+    return (keys || []).filter(k => FOOD[k]).map(k => `${FOOD[k].emoji} ${FOOD[k].label}`).join(', ');
+  }
+
+  /** A number from a form field, or null when empty or not positive. */
+  function num(v) {
+    if (v === '' || v == null) return null;
+    const n = Number(v);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }
+
   const feed = {
     label: 'Feed',
     noun: 'feed',
@@ -33,6 +83,8 @@ const Features = (() => {
     fields: [
       { name: 'method', input: 'segment',
         options: [['bottle', 'Bottle'], ['left', 'Left'], ['right', 'Right'], ['solids', 'Solids']] },
+      { name: 'foods', input: 'chips', label: 'What did he eat?', showIf: ['method', 'solids'],
+        options: FOODS.map(([k, e, l]) => [k, `${e} ${l}`]) },
       { name: 'amount', input: 'number', label: 'Amount', unit: 'volume', half: true },
       { name: 'minutes', input: 'number', label: 'Duration (min)', half: true },
       { input: 'hint', text: 'Fill in whichever you track — both are optional.' },
@@ -43,6 +95,7 @@ const Features = (() => {
     toValues(record, settings) {
       return {
         method: record?.data.method ?? 'bottle',
+        foods: record?.data.foods ?? [],
         amount: record?.data.amount != null ? Fmt.fromMl(record.data.amount, settings.units) : '',
         minutes: record?.end ? Math.round((record.end - record.at) / Fmt.MIN) : '',
         at: record?.at ?? Date.now(),
@@ -56,12 +109,17 @@ const Features = (() => {
         at: v.at,
         end: Number.isFinite(minutes) && minutes > 0 ? v.at + minutes * Fmt.MIN : null,
         note: v.note,
-        data: { method: v.method || 'bottle', amount: Fmt.toMl(v.amount, settings.units) },
+        data: {
+          method: v.method || 'bottle',
+          amount: Fmt.toMl(v.amount, settings.units),
+          ...(v.method === 'solids' && v.foods ? { foods: v.foods.split(',').filter(Boolean) } : {}),
+        },
       };
     },
 
     describe(record, settings) {
       const bits = [];
+      if (record.data.method === 'solids' && record.data.foods?.length) bits.push(foodList(record.data.foods));
       if (record.data.amount != null) bits.push(Fmt.amount(record.data.amount, settings.units));
       if (record.end) bits.push(Fmt.duration(record.end - record.at));
       return { title: FEED_METHOD[record.data.method] || 'Feed', detail: bits.join(' · ') };
@@ -71,7 +129,10 @@ const Features = (() => {
     statusLabel: 'Last feed',
     statusValue(record) { return Fmt.ago(record.at); },
     status(record, settings) {
-      return [FEED_METHOD[record.data.method], Fmt.amount(record.data.amount, settings.units)]
+      const foods = record.data.method === 'solids'
+        ? (record.data.foods || []).filter(k => FOOD[k]).map(k => FOOD[k].emoji).join('')
+        : '';
+      return [FEED_METHOD[record.data.method], foods, Fmt.amount(record.data.amount, settings.units)]
         .filter(Boolean).join(' · ');
     },
 
@@ -146,7 +207,7 @@ const Features = (() => {
     fields: [
       { name: 'at', input: 'datetime', label: 'Fell asleep' },
       { name: 'end', input: 'datetime', label: 'Woke up', optional: true },
-      { input: 'hint', text: 'Leave “woke up” empty while she is still asleep.' },
+      { input: 'hint', text: 'Leave “woke up” empty while he is still asleep.' },
       { name: 'note', input: 'textarea', label: 'Note (optional)' },
     ],
 
@@ -201,10 +262,108 @@ const Features = (() => {
     },
   };
 
-  const registry = { feed, diaper, sleep };
+  const pump = {
+    label: 'Pump',
+    plural: 'Pumps',
+    noun: 'pump session',
+    icon: '🥛',
+    secondary: true,       // smaller button, no card in the status row
+    fields: [
+      { name: 'left', input: 'number', label: 'Left', unit: 'volume', half: true },
+      { name: 'right', input: 'number', label: 'Right', unit: 'volume', half: true },
+      { name: 'minutes', input: 'number', label: 'Duration (min)' },
+      { name: 'at', input: 'datetime', label: 'Started' },
+      { name: 'note', input: 'textarea', label: 'Note (optional)' },
+    ],
+
+    toValues(record, settings) {
+      return {
+        left: Fmt.fromMl(record?.data.left ?? null, settings.units),
+        right: Fmt.fromMl(record?.data.right ?? null, settings.units),
+        minutes: record?.end ? Math.round((record.end - record.at) / Fmt.MIN) : '',
+        at: record?.at ?? Date.now(),
+        note: record?.note ?? '',
+      };
+    },
+
+    fromValues(v, settings) {
+      const minutes = num(v.minutes);
+      return {
+        at: v.at,
+        end: minutes ? v.at + minutes * Fmt.MIN : null,
+        note: v.note,
+        data: { left: Fmt.toMl(v.left, settings.units), right: Fmt.toMl(v.right, settings.units) },
+      };
+    },
+
+    describe(record, settings) {
+      const { left, right } = record.data;
+      const bits = [];
+      if (left != null) bits.push(`L ${Fmt.amount(left, settings.units)}`);
+      if (right != null) bits.push(`R ${Fmt.amount(right, settings.units)}`);
+      if (left != null && right != null) bits.push(`${Fmt.amount(left + right, settings.units)} total`);
+      if (record.end) bits.push(Fmt.duration(record.end - record.at));
+      return { title: 'Pumped', detail: bits.join(' · ') };
+    },
+
+    tally(record, totals) {
+      totals.pumps = (totals.pumps || 0) + 1;
+      const ml = (record.data.left || 0) + (record.data.right || 0);
+      if (ml) totals.pumpMl = (totals.pumpMl || 0) + ml;
+    },
+  };
+
+  const growth = {
+    label: 'Growth',
+    plural: 'Growth',
+    noun: 'measurement',
+    icon: '📏',
+    secondary: true,
+    fields: [
+      { name: 'weight', input: 'number', label: 'Weight (kg)', half: true },
+      { name: 'height', input: 'number', label: 'Length (cm)', half: true },
+      { name: 'head', input: 'number', label: 'Head (cm)' },
+      { input: 'hint', text: 'Fill in whatever was measured.' },
+      { name: 'at', input: 'datetime', label: 'Measured' },
+      { name: 'note', input: 'textarea', label: 'Note (optional)' },
+    ],
+
+    toValues(record) {
+      return {
+        weight: record?.data.weightKg ?? '',
+        height: record?.data.heightCm ?? '',
+        head: record?.data.headCm ?? '',
+        at: record?.at ?? Date.now(),
+        note: record?.note ?? '',
+      };
+    },
+
+    fromValues(v) {
+      const data = { weightKg: num(v.weight), heightCm: num(v.height), headCm: num(v.head) };
+      if (data.weightKg == null && data.heightCm == null && data.headCm == null) {
+        return { error: 'Enter at least one measurement.' };
+      }
+      return { at: v.at, end: null, note: v.note, data };
+    },
+
+    describe(record) {
+      return { title: 'Growth', detail: growthText(record) };
+    },
+  };
+
+  function growthText(record) {
+    const { weightKg, heightCm, headCm } = record.data;
+    return [
+      weightKg != null ? `${weightKg} kg` : '',
+      heightCm != null ? `${heightCm} cm long` : '',
+      headCm != null ? `head ${headCm} cm` : '',
+    ].filter(Boolean).join(' · ');
+  }
+
+  const registry = { feed, diaper, sleep, pump, growth };
 
   /** The order features appear in quick-log buttons, filters and summaries. */
-  const ORDER = ['feed', 'diaper', 'sleep'];
+  const ORDER = ['feed', 'diaper', 'sleep', 'pump', 'growth'];
 
   return {
     get(type) { return registry[type] || null; },
@@ -212,6 +371,6 @@ const Features = (() => {
     types() { return [...ORDER]; },
     has(type) { return type in registry; },
     icon(type) { return registry[type]?.icon || '•'; },
-    FEED_METHOD, DIAPER_KIND,
+    FEED_METHOD, DIAPER_KIND, FOODS, growthText,
   };
 })();

@@ -24,7 +24,7 @@ const Store = (() => {
   const SETTINGS_KEY = 'nayla.settings.v1';
 
   const DEFAULT_SETTINGS = {
-    name: 'Nayla',
+    name: 'Jethro',
     dob: '2026-06-04',
     units: 'ml',
     syncUrl: '',

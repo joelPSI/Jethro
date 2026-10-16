@@ -63,7 +63,7 @@ const Install = (() => {
               </ol>`;
     }
     if (isIOS) {
-      return `<p class="install-lead">Three taps, and Nayla sits on your Home Screen
+      return `<p class="install-lead">Three taps, and Jethro sits on your Home Screen
                 like any other app.</p>
               <ol class="install-steps">
                 <li><span class="step-n">1</span>
@@ -77,7 +77,7 @@ const Install = (() => {
                 — Safari hides its toolbar as you scroll up.</p>`;
     }
     if (isAndroid) {
-      return `<p class="install-lead">Nayla can sit on your Home Screen like any other app.</p>
+      return `<p class="install-lead">Jethro can sit on your Home Screen like any other app.</p>
               <ol class="install-steps">
                 <li><span class="step-n">1</span>
                   <span>Tap the <b>⋮</b> menu at the top right of Chrome.</span></li>

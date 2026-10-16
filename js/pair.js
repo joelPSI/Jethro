@@ -47,7 +47,7 @@ const Pair = (() => {
   async function share() {
     const url = link(Store.settings().syncCode);
     if (navigator.share) {
-      try { await navigator.share({ title: 'Nayla', url }); return 'shared'; }
+      try { await navigator.share({ title: 'Jethro', url }); return 'shared'; }
       catch { return 'cancelled'; }
     }
     try { await navigator.clipboard.writeText(url); return 'copied'; }
