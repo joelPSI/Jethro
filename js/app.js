@@ -7,7 +7,7 @@
 (() => {
   const $ = sel => document.querySelector(sel);
   const RING_CIRCUMFERENCE = 2 * Math.PI * 52;
-  const NAP_REFERENCE_MS = 2 * Fmt.HOUR;   // the ring's full sweep while asleep
+  const FEED_REFERENCE_MS = 3 * Fmt.HOUR;  // the ring's full sweep since the last feed
 
   Store.init();
 
@@ -60,17 +60,7 @@
     const records = Store.all();
     const st = Wake.state(records, Fmt.ageMonths(settings.dob));
 
-    const card = $('#wakeCard');
-    card.classList.toggle('is-sleeping', st.sleeping);
-    card.classList.toggle('is-over', !st.sleeping && st.status === 'over');
-
-    $('#wakeLabel').textContent = st.sleeping ? 'Asleep for' : 'Awake for';
-    // A stale reading is a gap in the log, not a real duration — "100h" reads
-    // like something is badly wrong with the baby rather than with the log.
-    $('#wakeValue').textContent =
-      (st.elapsedMs == null || st.stale) ? '—' : Fmt.duration(st.elapsedMs);
-    $('#wakeSub').textContent = Wake.hint(st);
-    $('#sleepToggle').textContent = st.sleeping ? 'Woke up' : 'Start sleep';
+    renderFeedCard(settings);
 
     // A "Start sleep" that never got its "Woke up". Offer to sort it out,
     // rather than silently counting up for days.
@@ -83,18 +73,41 @@
         `${Fmt.clock(st.forgotten.at)} was never closed — tap to fix`;
     }
 
-    const ratio = st.sleeping
-      ? Math.min(1, st.elapsedMs / NAP_REFERENCE_MS)
-      : Math.min(1, st.ratio ?? 0);
-    $('#ringFill').style.strokeDashoffset = RING_CIRCUMFERENCE * (1 - ratio);
-
     renderStatusRow(settings);
     renderToday(settings);
     renderList($('#recentList'), records.slice(0, 8), settings);
   }
 
+  /* The top card: time since the last feed, and one-tap buttons to log the
+   * next one. The breast side not used last time is highlighted. */
+  function renderFeedCard(settings) {
+    const last = Store.latest('feed');
+    const elapsed = last ? Date.now() - last.at : null;
+
+    // Past a day, "1d 2h" fits the ring where "26h 10m" would not.
+    $('#wakeValue').textContent = elapsed == null ? '—'
+      : elapsed >= Fmt.DAY
+        ? `${Math.floor(elapsed / Fmt.DAY)}d ${Math.floor((elapsed % Fmt.DAY) / Fmt.HOUR)}h`
+        : Fmt.duration(elapsed);
+    $('#wakeSub').textContent = last
+      ? `${Features.FEED_METHOD[last.data.method] || 'Feed'} at ${Fmt.clock(last.at)}`
+      : 'No feeds logged yet';
+    const ratio = elapsed == null ? 0 : Math.min(1, elapsed / FEED_REFERENCE_MS);
+    $('#ringFill').style.strokeDashoffset = RING_CIRCUMFERENCE * (1 - ratio);
+
+    const lastSide = Store.all().find(r => r.type === 'feed' &&
+      (r.data.method === 'left' || r.data.method === 'right'))?.data.method;
+    const next = lastSide === 'left' ? 'right' : lastSide === 'right' ? 'left' : null;
+
+    const button = (method, label) =>
+      `<button class="btn ${method === next ? 'btn-primary' : 'btn-soft'}" data-feed-now="${method}">
+         ${label}${method === next ? '<small>next side</small>' : ''}</button>`;
+    $('#feedActions').innerHTML =
+      button('left', 'Left') + button('right', 'Right') + button('bottle', '🍼 Bottle');
+  }
+
   function renderStatusRow(settings) {
-    $('#statusRow').innerHTML = Features.all().filter(f => f.statusLabel).map(f => {
+    $('#statusRow').innerHTML = Features.all().filter(f => f.statusLabel && f.type !== 'feed').map(f => {
       const record = Store.latest(f.type, { completedOnly: Boolean(f.statusCompletedOnly) });
       return `<button class="stat" data-quick="${f.type}">
         <span class="stat-icon">${f.icon}</span>
@@ -268,9 +281,9 @@
   }
 
   /* ── logging actions ─────────────────────────────────────── */
-  function openSheet(type, record) {
+  function openSheet(type, record, preset) {
     Sheet.open({
-      type, record,
+      type, record, preset,
       onSave(fields, existing) {
         if (existing) { Store.update(existing.id, fields); toast('Updated'); }
         else { Store.add(fields); toast('Saved'); }
@@ -298,17 +311,9 @@
     }
   });
 
-  $('#sleepToggle').addEventListener('click', () => {
-    // Deliberately Wake's view, not Store's: a sleep left running for days is
-    // not the one this button should close.
-    const active = Wake.state(Store.all(), Fmt.ageMonths(Store.settings().dob)).entry;
-    if (active && active.end == null) {
-      Store.update(active.id, { end: Date.now() });
-      toast(`Slept ${Fmt.duration(Date.now() - active.at)}`);
-    } else {
-      Store.add({ type: 'sleep', at: Date.now(), end: null, data: {} });
-      toast('Sleep started');
-    }
+  $('#feedActions').addEventListener('click', e => {
+    const btn = e.target.closest('[data-feed-now]');
+    if (btn) openSheet('feed', undefined, { method: btn.dataset.feedNow });
   });
 
   /* ── SETTINGS view ───────────────────────────────────────── */

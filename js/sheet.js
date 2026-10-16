@@ -135,7 +135,8 @@ const Sheet = (() => {
     if (!feature) return;
 
     const settings = Store.settings();
-    const values = feature.toValues(options.record, settings);
+    // `preset` pre-fills a new entry, e.g. the feed buttons on the Now screen.
+    const values = { ...feature.toValues(options.record, settings), ...(options.preset || {}) };
 
     title.textContent = `${options.record ? 'Edit' : 'Log'} ${feature.noun}`;
     fields.innerHTML = renderFields(feature.fields, values, settings);
