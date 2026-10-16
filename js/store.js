@@ -25,7 +25,7 @@ const Store = (() => {
 
   const DEFAULT_SETTINGS = {
     name: 'Jethro',
-    dob: '2026-06-04',
+    dob: '2026-02-04',
     units: 'ml',
     syncUrl: '',
     syncKey: '',
