@@ -271,7 +271,7 @@ input[type="datetime-local"] { -webkit-appearance: none; appearance: none; displ
 .entry-dot.growth { background: var(--growth-soft); }
 .entry-main { flex: 1; min-width: 0; }
 .entry-title { font-weight: 600; font-size: 15px; }
-.entry-sub { font-size: 13px; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.entry-sub { font-size: 13px; color: var(--text-dim); overflow-wrap: anywhere; }
 .entry-time { font-size: 13px; color: var(--text-dim); text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .entry.is-live .entry-time { color: var(--sleep); font-weight: 600; }
 
